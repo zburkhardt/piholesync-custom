@@ -51,7 +51,7 @@ or other docs about using pihole for DHCP with this script.
 9. type "yes" - YOU MUST TYPE "yes", not "y"
 10. type the password of your secondary pihole
 
-# ENABLE REMOTE COMMANDS USING SSH Keys ON Remote pihole 
+# ENABLE REMOTE COMMANDS USING SSH Keys ON Remote pihole
 11  type "cd ~/.ssh"
 12. type "eval `ssh-agent`" <- this step may not be needed, depending upon what is running on your primary pihole
 13. type "ssh-add id_rsa.pub"
@@ -74,38 +74,45 @@ or other docs about using pihole for DHCP with this script.
 #VARS
 FILES=(black.list blacklist.txt regex.list whitelist.txt lan.list) #list of files you want to sync
 PIHOLEDIR=/etc/pihole #working dir of pihole
-PIHOLE2=192.168.1.3 #IP of 2nd PiHole
-HAUSER=root #user of second pihole
+PIHOLE1=192.168.10.2 #IP of 1st PiHole
+HAUSER=pi #user of 1st pihole
 
 #LOOP FOR FILE TRANSFER
 RESTART=0 # flag determine if service restart is needed
-for FILE in ${FILES[@]}
-do
-  if [[ -f $PIHOLEDIR/$FILE ]]; then
-  RSYNC_COMMAND=$(rsync -ai $PIHOLEDIR/$FILE $HAUSER@$PIHOLE2:$PIHOLEDIR)
-    if [[ -n "${RSYNC_COMMAND}" ]]; then
-      # rsync copied changes
-      RESTART=1 # restart flagged
-     # else 
-       # no changes
-     fi
-  # else
-    # file does not exist, skipping
-  fi
-done
+#for FILE in ${FILES[@]}
+#do
+#  #if [[ -f $PIHOLEDIR/$FILE ]]; then
+#  RSYNC_COMMAND=$(sudo rsync -ai -e "ssh -i /home/pi/.ssh/id_rsa" $HAUSER@$PIHOLE1:$PIHOLEDIR/$FILE $PIHOLEDIR)
+#    if [[ -n "${RSYNC_COMMAND}" ]]; then
+#     # rsync copied changes
+#      RESTART=1 # restart flagged
+#     # else
+#       # no changes
+#     fi
+#  # else
+#    # file does not exist, skipping
+#  #fi
+#done
 
-FILE="adlists.list"
-RSYNC_COMMAND=$(rsync -ai $PIHOLEDIR/$FILE $HAUSER@$PIHOLE2:$PIHOLEDIR)
-if [[ -n "${RSYNC_COMMAND}" ]]; then
+FILE="whitelist.txt"
+#RSYNC_COMMAND=$(rsync -ai $PIHOLEDIR/$FILE $HAUSER@$PIHOLE1:$PIHOLEDIR)
+#RSYNC_COMMAND=$(rsync --rsync-path="sudo rsync" -ai $HAUSER@$PIHOLE1:$PIHOLEDIR/$FILE $PIHOLEDIR)
+RSYNC_COMMAND=$(sudo rsync -ai -e "ssh -i /home/pi/.ssh/id_rsa" $HAUSER@$PIHOLE1:$PIHOLEDIR/$FILE $PIHOLEDIR)
+if !(sudo rsync -ai -e "ssh -i /home/pi/.ssh/id_rsa" $HAUSER@$PIHOLE1:$PIHOLEDIR/$FILE $PIHOLEDIR); then
   # rsync copied changes, update GRAVITY
-  ssh $HAUSER@$PIHOLE2 "sudo -S pihole -g"
+  #ssh $HAUSER@$PIHOLE1 "sudo -S pihole -g"
+  RESTART=1
 # else
   # no changes
 fi
 
 if [ $RESTART == "1" ]; then
   # INSTALL FILES AND RESTART pihole
-  ssh $HAUSER@$PIHOLE2 "sudo -S service pihole-FTL stop"
-  ssh $HAUSER@$PIHOLE2 "sudo -S pkill pihole-FTL"
-  ssh $HAUSER@$PIHOLE2 "sudo -S service pihole-FTL start"
+#  ssh $HAUSER@$PIHOLE1 "sudo -S service pihole-FTL stop"
+#  ssh $HAUSER@$PIHOLE1 "sudo -S pkill pihole-FTL"
+#  ssh $HAUSER@$PIHOLE1 "sudo -S service pihole-FTL start"
+##  sleep 15
+##  sudo -S service pihole-FTL restart
+##  sleep 15
+  sudo -S pihole -g
 fi
